@@ -89,6 +89,8 @@
 
     <h1>Game</h1>
 
+    <div id="profile"></div>
+
     <div id="quiz">
         <p id="question"></p>
         <p id="options"></p>
@@ -120,6 +122,8 @@
 
   socket.on('socketId', (e)=>{
     console.log(e);
+
+    document.getElementById('profile').innerHTML = e
   })
 
 

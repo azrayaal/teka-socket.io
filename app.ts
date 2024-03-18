@@ -34,6 +34,7 @@ app.get("/waitingroom", (req, res) => {
 app.get("/game", (req, res) => {
   res.sendFile(join(__dirname, "game.html"));
 });
+
 app.get("/profile", (req, res) => {
   res.sendFile(join(__dirname, "profile.html"));
 });
@@ -60,30 +61,23 @@ function startCountdown() {
 //////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
-  ////////////////////// PROFILE ROOM //////////////////////
-  // socket.on("profileData", (name) => {
-  // console.log(e);
-  // usersInWaitingRoom.push({ id: socket.id, name: name });
-  // Emit the updated array to all users in the waiting room
-  // io.to(waitingRoom).emit("usersInWaitingRoom", usersInWaitingRoom);
-
-  // });
-  ////////////////////// END OF PROFILE ROOM ///////////////
   ////////////////////// WAITING ROOM //////////////////////
   let player = {
-    name: "azra",
+    name: "", // get from client
     id: socket.id,
   };
 
   socket.join(waitingRoom);
   console.log("Room", waitingRoom, "created");
+
   // usersInWaitingRoom.push(socket.id);
   usersInWaitingRoom.push(player);
   io.to(waitingRoom).emit("usersCount", usersInWaitingRoom.length);
+  socket.emit("usersInWaitingRoom", usersInWaitingRoom);
 
   console.log(usersInWaitingRoom.length);
-  socket.emit("usersInWaitingRoom", usersInWaitingRoom);
   console.log(usersInWaitingRoom);
+
   socket.on("disconnect", () => {
     console.log("A user disconnected");
     // Remove user from waiting room
@@ -111,16 +105,6 @@ io.on("connection", (socket) => {
   // Move users to game room when there are four users
   if (usersInWaitingRoom.length === 4) {
     io.to(waitingRoom).emit("moveTogameRoom");
-
-    // for (let i = 0; i < usersInWaitingRoom.length; i++) {
-    //   const socketId = usersInWaitingRoom[i];
-    //   const socket = io.sockets.sockets.get(socketId);
-    //   console.log("socket", socketId);
-    //   if (socket) {
-    //     socket.leave(waitingRoom);
-    //     socket.join(gameRoom);
-    //   }
-    // }
 
     usersInWaitingRoom.forEach((user) => {
       const socket = io.sockets.sockets.get(user.id);
@@ -157,6 +141,7 @@ io.on("connection", (socket) => {
         }
         return array;
       }
+
       const options = [
         randomQuizQuestion.answer,
         randomQuizQuestion.option1,

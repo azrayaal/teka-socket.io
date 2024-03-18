@@ -25,8 +25,8 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      var socket = io();
-      document.getElementById('profileForm').addEventListener('submit', function(event) {
+    var socket = io();
+    document.getElementById('profileForm').addEventListener('submit', function(event) {
     event.preventDefault(); // Prevent default form submission
 
     // Get the value of the name input field
@@ -37,7 +37,7 @@
 
     // Optionally, clear the input field after submission
     document.getElementById('nameInput').value = '';
-});
+    });
 
       </script>
   </body>
