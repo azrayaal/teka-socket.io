@@ -64,15 +64,32 @@
     <p id="timeout"></p>
     <h1 id="timer"></h1>
 
+    <div id="listPlayer"></div>
+
   
   <p id="usersCount">Players in waiting room: 0</p>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
       var socket = io();
-    
+
     socket.on('usersCount', (count)=>{
       document.getElementById('usersCount').textContent = `Users in waiting room: ${count}`
+    })
+
+    socket.on('usersInWaitingRoom', (players)=>{
+      console.log(players)
+
+      const listPlayers = document.getElementById('listPlayer')
+
+      listPlayers.innerHTML = ''
+
+      players.forEach(player => {
+        const listItem = document.createElement('li');
+        listItem.innerText = `Name: ${player.name}, id: ${player.id}`
+        listPlayers.appendChild(listItem);
+      });
+      
     })
 
     socket.on('moveTogameRoom', ()=>{
@@ -83,10 +100,19 @@
 
     socket.on('countdown', (seconds)=>{
       document.getElementById('timer').textContent = seconds
-      // if(seconds === 0){
-      //   window.location.href = '/'
-      // }
+      if(seconds === 0){
+        // window.location.href = '/profile'
+      }
     })
+
+    socket.on('id', (id)=>{
+      console.log(id);
+    })
+
+    socket.on('game', (e)=>{
+
+        console.log(e)
+      })
 
 
       </script>

@@ -1,15 +1,22 @@
-const express = require("express");
-const { join } = require("node:path");
-const http = require("http");
-const { Server } = require("socket.io");
-const cors = require("cors"); // Import the CORS middleware
+import express from "express";
+import { join } from "node:path";
+import http from "http";
+import { Server, Socket } from "socket.io";
+import cors from "cors";
+import Axios from "axios";
 
 const app = express();
 const port = 3000;
 
 const server = http.createServer(app);
 
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    allowedHeaders: "*",
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
 // var io = require('socket.io').listen(server);
 app.use(cors()); // Enable CORS for all routes
 app.get("/", (req, res) => {
@@ -27,38 +34,61 @@ app.get("/waitingroom", (req, res) => {
 app.get("/game", (req, res) => {
   res.sendFile(join(__dirname, "game.html"));
 });
+app.get("/profile", (req, res) => {
+  res.sendFile(join(__dirname, "profile.html"));
+});
 
 const waitingRoom = "waitingRoom";
 const gameRoom = "gameRoom";
-let usersInWaitingRoom = [];
-let countdownInterval;
+let usersInWaitingRoom: any[] = [];
+let countdownInterval: any;
 let seconds = 30;
 
+////////////////////// COUNTDOWN //////////////////////
+function startCountdown() {
+  countdownInterval = setInterval(() => {
+    seconds--;
+    io.emit("countdown", seconds);
+    if (seconds === -1) {
+      clearInterval(countdownInterval);
+      seconds = 30;
+    }
+    // Emit countdown value to all clients
+    io.emit("countdown", seconds);
+  }, 1000);
+}
+//////////////////////////////////////////////////////
+
 io.on("connection", (socket) => {
+  ////////////////////// PROFILE ROOM //////////////////////
+  // socket.on("profileData", (name) => {
+  // console.log(e);
+  // usersInWaitingRoom.push({ id: socket.id, name: name });
+  // Emit the updated array to all users in the waiting room
+  // io.to(waitingRoom).emit("usersInWaitingRoom", usersInWaitingRoom);
+
+  // });
+  ////////////////////// END OF PROFILE ROOM ///////////////
   ////////////////////// WAITING ROOM //////////////////////
-  ////////////////////// countdown //////////////////////
-  function startCountdown() {
-    countdownInterval = setInterval(() => {
-      seconds--;
-      io.emit("countdown", seconds);
-      if (seconds === -1) {
-        clearInterval(countdownInterval);
-        seconds = 30;
-      }
-      // Emit countdown value to all clients
-      io.emit("countdown", seconds);
-    }, 1000);
-  }
-  //////////////////////////////////////////////////////
+  let player = {
+    name: "azra",
+    id: socket.id,
+  };
+
   socket.join(waitingRoom);
   console.log("Room", waitingRoom, "created");
-  usersInWaitingRoom.push(socket.id);
+  // usersInWaitingRoom.push(socket.id);
+  usersInWaitingRoom.push(player);
   io.to(waitingRoom).emit("usersCount", usersInWaitingRoom.length);
 
+  console.log(usersInWaitingRoom.length);
+  socket.emit("usersInWaitingRoom", usersInWaitingRoom);
+  console.log(usersInWaitingRoom);
   socket.on("disconnect", () => {
     console.log("A user disconnected");
     // Remove user from waiting room
-    const index = usersInWaitingRoom.indexOf(socket.id);
+    const index = usersInWaitingRoom.findIndex((user) => user.id === socket.id);
+
     console.log("index", index);
     if (index !== -1) {
       usersInWaitingRoom.splice(index, 1);
@@ -82,18 +112,72 @@ io.on("connection", (socket) => {
   if (usersInWaitingRoom.length === 4) {
     io.to(waitingRoom).emit("moveTogameRoom");
 
-    for (let i = 0; i < usersInWaitingRoom.length; i++) {
-      const socketId = usersInWaitingRoom[i];
-      const socket = io.sockets.sockets[socketId];
+    // for (let i = 0; i < usersInWaitingRoom.length; i++) {
+    //   const socketId = usersInWaitingRoom[i];
+    //   const socket = io.sockets.sockets.get(socketId);
+    //   console.log("socket", socketId);
+    //   if (socket) {
+    //     socket.leave(waitingRoom);
+    //     socket.join(gameRoom);
+    //   }
+    // }
+
+    usersInWaitingRoom.forEach((user) => {
+      const socket = io.sockets.sockets.get(user.id);
+      console.log(user.id);
+      // Check if the socket exists
       if (socket) {
+        // Leave the waiting room
         socket.leave(waitingRoom);
+        // Join the game room
         socket.join(gameRoom);
       }
-    }
+    });
     usersInWaitingRoom = [];
   }
+  ////////////////////// END OF WAITING ROOM //////////////////////
+  ////////////////////// GAME ROOM //////////////////////////////
+
+  const getQuestion = async () => {
+    try {
+      const res = await Axios.get("http://localhost:8080/api/v1/quiz");
+      let quiz = res.data;
+      const getRandomQuiz = (quiz: any) => {
+        const randomIndex = Math.floor(Math.random() * quiz.length);
+        return quiz[randomIndex];
+      };
+      const randomQuizQuestion = getRandomQuiz(quiz);
+
+      // socket.emit("game", randomQuizQuestion);
+
+      function shuffleArray(array: any) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+      const options = [
+        randomQuizQuestion.answer,
+        randomQuizQuestion.option1,
+        randomQuizQuestion.option2,
+        randomQuizQuestion.option3,
+      ];
+
+      shuffleArray(options);
+      let question = randomQuizQuestion.question;
+
+      io.to(gameRoom).emit("game", { question, options });
+    } catch (error) {
+      // console.log("error");
+    }
+  };
+  getQuestion();
+
+  socket.emit("socketId", socket.id);
+
+  ////////////////////// END OF GAME ROOM //////////////////////
 });
-////////////////////// END OF WAITING ROOM //////////////////////
 
 server.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
