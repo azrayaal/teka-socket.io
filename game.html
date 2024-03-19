@@ -99,11 +99,11 @@
     </div>
 
 </body>
+
 <script src="/socket.io/socket.io.js"></script>
-
-
 <script>
   var socket = io();
+
   socket.on('game', (q)=>{
     console.log(q);
 
@@ -128,7 +128,7 @@
   })
 
   socket.on('countdownQuestions', (countdown)=>{
-    console.log(countdown);
+    // console.log(countdown);
     document.getElementById('timer').innerHTML = countdown
   })
 
