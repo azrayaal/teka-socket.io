@@ -48,18 +48,17 @@ let seconds = 30;
 ////////////////////// COUNTDOWN //////////////////////
 function startCountdown() {
   countdownInterval = setInterval(() => {
-    seconds--;
+    // Emit countdown value to all clients
     io.emit("countdown", seconds);
+    // console.log(seconds);
+    seconds--;
     if (seconds === -1) {
       clearInterval(countdownInterval);
       seconds = 30;
     }
-    // Emit countdown value to all clients
-    io.emit("countdown", seconds);
   }, 1000);
 }
 //////////////////////////////////////////////////////
-
 io.on("connection", (socket) => {
   ////////////////////// WAITING ROOM //////////////////////
   let player = {
@@ -75,23 +74,22 @@ io.on("connection", (socket) => {
   io.to(waitingRoom).emit("usersCount", usersInWaitingRoom.length);
   socket.emit("usersInWaitingRoom", usersInWaitingRoom);
 
-  console.log(usersInWaitingRoom.length);
-  console.log(usersInWaitingRoom);
-
   socket.on("disconnect", () => {
     console.log("A user disconnected");
     // Remove user from waiting room
-    const index = usersInWaitingRoom.findIndex((user) => user.id === socket.id);
+    const indexLeft = usersInWaitingRoom.findIndex(
+      (user) => user.id === socket.id
+    );
 
-    console.log("index", index);
-    if (index !== -1) {
-      usersInWaitingRoom.splice(index, 1);
+    console.log("indexLeft", indexLeft);
+    if (indexLeft !== -1) {
+      usersInWaitingRoom.splice(indexLeft, 1);
     }
     // update users in waiting room after leave
     io.to(waitingRoom).emit("usersCount", usersInWaitingRoom.length);
 
     // Terminate waiting room if it becomes empty
-    if (index === 0) {
+    if (indexLeft === 0) {
       seconds = 30;
       clearInterval(countdownInterval);
       console.log("Room", waitingRoom, "terminated.");
@@ -119,50 +117,233 @@ io.on("connection", (socket) => {
     });
     usersInWaitingRoom = [];
   }
-  ////////////////////// END OF WAITING ROOM //////////////////////
+  ////////////////////// END OF WAITING ROOM /////////////////////
   ////////////////////// GAME ROOM //////////////////////////////
 
-  const getQuestion = async () => {
+  let questionInterval: any = 10000; // Time in milliseconds for each question
+  let secondsQuiz = 10;
+
+  function countdownQuestion() {
+    questionInterval = setInterval(() => {
+      // Emit countdown value to all clients
+      io.emit("countdownQuestions", secondsQuiz);
+      // console.log(secondsQuiz);
+      secondsQuiz--;
+      if (secondsQuiz === -1) {
+        clearInterval(questionInterval);
+        secondsQuiz = 10;
+      }
+    }, 1000);
+  }
+  countdownQuestion();
+
+  const getQuestionfromAPI = async () => {
     try {
       const res = await Axios.get("http://localhost:8080/api/v1/quiz");
       let quiz = res.data;
-      const getRandomQuiz = (quiz: any) => {
-        const randomIndex = Math.floor(Math.random() * quiz.length);
-        return quiz[randomIndex];
+      // console.log("quiz", quiz);
+
+      const shuffleQuestion = (quiz: any) => {
+        // to make all the array shuffle
+        for (let i = quiz.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1)); // Random index within the unshuffled portion of the array
+          // Swap elements at indices i and j
+          const temp = quiz[i];
+          quiz[i] = quiz[j];
+          quiz[j] = temp;
+        }
+        // console.log("quiz", quiz);
+        return quiz;
       };
-      const randomQuizQuestion = getRandomQuiz(quiz);
 
-      // socket.emit("game", randomQuizQuestion);
+      let shuffledQuestion = shuffleQuestion(quiz);
 
-      function shuffleArray(array: any) {
+      const oneShuffleQuestion = shuffledQuestion[0];
+
+      let questionInterval: any; // Time in milliseconds for each question
+      let secondsQuiz = 10;
+
+      function countdownQuestion() {
+        questionInterval = setInterval(() => {
+          // Emit countdown value to all clients
+          // io.emit("countdownQuestions", secondsQuiz);
+          console.log(secondsQuiz);
+          secondsQuiz--;
+          if (secondsQuiz === -1) {
+            clearInterval(questionInterval);
+            secondsQuiz = 10;
+            quiz.splice(shuffledQuestion, 1);
+            if (quiz.length > 0) {
+              countdownQuestion();
+            }
+            const options = [
+              shuffledQuestion[0].answer,
+              shuffledQuestion[0].option1,
+              shuffledQuestion[0].option2,
+              shuffledQuestion[0].option3,
+            ];
+            shuffleOptions(options);
+            const question = shuffledQuestion[0].question;
+            io.to(gameRoom).emit("game", { question, options });
+            console.log("shuffle all", { question, options });
+            console.log("quiz[0]", shuffledQuestion[0]);
+            console.log("shuffledQuestionss", shuffledQuestion);
+            console.log(secondsQuiz);
+          }
+        }, 1000);
+      }
+      countdownQuestion();
+
+      function shuffleOptions(array: any) {
         for (let i = array.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [array[i], array[j]] = [array[j], array[i]];
         }
         return array;
       }
-
+      // shuffle options
       const options = [
-        randomQuizQuestion.answer,
-        randomQuizQuestion.option1,
-        randomQuizQuestion.option2,
-        randomQuizQuestion.option3,
+        oneShuffleQuestion.answer,
+        oneShuffleQuestion.option1,
+        oneShuffleQuestion.option2,
+        oneShuffleQuestion.option3,
       ];
-
-      shuffleArray(options);
-      let question = randomQuizQuestion.question;
-
-      io.to(gameRoom).emit("game", { question, options });
+      shuffleOptions(options);
+      const question = oneShuffleQuestion.question;
+      console.log("shuffle all", { question, options });
     } catch (error) {
-      // console.log("error");
+      console.log("error");
     }
   };
-  getQuestion();
+  getQuestionfromAPI();
 
+  ///////////////////
+
+  // const getQuestion = async () => {
+  //   try {
+  //     const res = await Axios.get("http://localhost:8080/api/v1/quiz");
+  //     let quiz = res.data;
+
+  //     const getRandomQuiz = (quiz: any) => {
+  //       const randomIndex = Math.floor(Math.random() * quiz.length);
+  //       return quiz[randomIndex];
+  //     };
+  //     const randomQuizQuestion = getRandomQuiz(quiz);
+  //     // console.log("randomQuizQuestion", randomQuizQuestion);
+  //     // socket.emit("game", randomQuizQuestion);
+
+  //     function shuffleArray(array: any) {
+  //       for (let i = array.length - 1; i > 0; i--) {
+  //         const j = Math.floor(Math.random() * (i + 1));
+  //         [array[i], array[j]] = [array[j], array[i]];
+  //       }
+  //       return array;
+  //     }
+  //     const options = [
+  //       randomQuizQuestion.answer,
+  //       randomQuizQuestion.option1,
+  //       randomQuizQuestion.option2,
+  //       randomQuizQuestion.option3,
+  //     ];
+  //     // console.log("question", randomQuizQuestion);
+
+  //     shuffleArray(options);
+
+  //     let question = randomQuizQuestion.question;
+
+  //     // console.log("shuffle option", options);
+
+  //     io.to(gameRoom).emit("game", { question, options });
+  //   } catch (error) {
+  //     console.log("error");
+  //   }
+  // };
+
+  // getQuestion();
   socket.emit("socketId", socket.id);
 
   ////////////////////// END OF GAME ROOM //////////////////////
 });
+
+// const getQuestionfromAPI = async () => {
+//   try {
+//     const res = await Axios.get("http://localhost:8080/api/v1/quiz");
+//     let quiz = res.data;
+//     // console.log("quiz", quiz);
+
+//     const shuffleQuestion = (quiz: any) => {
+//       // to make all the array shuffle
+//       for (let i = quiz.length - 1; i > 0; i--) {
+//         const j = Math.floor(Math.random() * (i + 1)); // Random index within the unshuffled portion of the array
+//         // Swap elements at indices i and j
+//         const temp = quiz[i];
+//         quiz[i] = quiz[j];
+//         quiz[j] = temp;
+//       }
+//       // console.log("quiz", quiz);
+//       return quiz;
+//     };
+
+//     let shuffledQuestion = shuffleQuestion(quiz);
+
+//     const oneShuffleQuestion = shuffledQuestion[0];
+
+//     let questionInterval: any; // Time in milliseconds for each question
+//     let secondsQuiz = 10;
+
+//     function countdownQuestion() {
+//       questionInterval = setInterval(() => {
+//         // Emit countdown value to all clients
+//         // io.emit("countdownQuestions", secondsQuiz);
+//         console.log(secondsQuiz);
+//         secondsQuiz--;
+//         if (secondsQuiz === -1) {
+//           clearInterval(questionInterval);
+//           secondsQuiz = 10;
+//           quiz.splice(shuffledQuestion, 1);
+//           if (quiz.length > 0) {
+//             countdownQuestion();
+//           }
+//           const options = [
+//             shuffledQuestion[0].answer,
+//             shuffledQuestion[0].option1,
+//             shuffledQuestion[0].option2,
+//             shuffledQuestion[0].option3,
+//           ];
+//           shuffleOptions(options);
+//           const question = shuffledQuestion[0].question;
+//           io.to(gameRoom).emit("game", { question, options });
+//           console.log("shuffle all", { question, options });
+//           console.log("quiz[0]", shuffledQuestion[0]);
+//           console.log("shuffledQuestionss", shuffledQuestion);
+//           console.log(secondsQuiz);
+//         }
+//       }, 1000);
+//     }
+//     countdownQuestion();
+
+//     function shuffleOptions(array: any) {
+//       for (let i = array.length - 1; i > 0; i--) {
+//         const j = Math.floor(Math.random() * (i + 1));
+//         [array[i], array[j]] = [array[j], array[i]];
+//       }
+//       return array;
+//     }
+//     // shuffle options
+//     const options = [
+//       oneShuffleQuestion.answer,
+//       oneShuffleQuestion.option1,
+//       oneShuffleQuestion.option2,
+//       oneShuffleQuestion.option3,
+//     ];
+//     shuffleOptions(options);
+//     const question = oneShuffleQuestion.question;
+//     console.log("shuffle all", { question, options });
+//   } catch (error) {
+//     console.log("error");
+//   }
+// };
+// getQuestionfromAPI();
 
 server.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

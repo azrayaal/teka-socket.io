@@ -75,6 +75,8 @@
 
     socket.on('usersCount', (count)=>{
       document.getElementById('usersCount').textContent = `Users in waiting room: ${count}`
+
+      console.log(count);
     })
 
     socket.on('usersInWaitingRoom', (players)=>{
@@ -113,6 +115,9 @@
 
         console.log(e)
       })
+
+      socket.emit('hello', 'hello from waiting room')
+
 
 
       </script>

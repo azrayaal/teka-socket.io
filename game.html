@@ -87,6 +87,8 @@
 
 <body>
 
+    <div id="timer"></div>
+
     <h1>Game</h1>
 
     <div id="profile"></div>
@@ -102,7 +104,6 @@
 
 <script>
   var socket = io();
-  
   socket.on('game', (q)=>{
     console.log(q);
 
@@ -124,6 +125,11 @@
     console.log(e);
 
     document.getElementById('profile').innerHTML = e
+  })
+
+  socket.on('countdownQuestions', (countdown)=>{
+    console.log(countdown);
+    document.getElementById('timer').innerHTML = countdown
   })
 
 
