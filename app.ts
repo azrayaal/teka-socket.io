@@ -53,7 +53,7 @@ let seconds = 30;
 function startCountdown() {
   countdownInterval = setInterval(() => {
     io.emit("countdown", seconds);
-    // console.log(seconds);
+    console.log(seconds);
     seconds--;
     if (seconds === -1) {
       clearInterval(countdownInterval);
@@ -61,7 +61,7 @@ function startCountdown() {
     }
   }, 1000);
 }
-startCountdown();
+// startCountdown();
 //////////////////////////////////////////////////////
 const updateWaitingRoom = () => {
   io.to(waitingRoom).emit("usersCount", usersInWaitingRoom.length);
@@ -102,20 +102,20 @@ io.on("connection", (socket) => {
       usersInWaitingRoom.splice(indexLeft, 1);
     }
     updateWaitingRoom();
-
-    // Start countdown when the first user joins the waiting room
-    if (usersInWaitingRoom.length >= 1 && seconds === 30) {
-      startCountdown();
-      console.log("start counting");
-    }
-
-    // Terminate waiting room if it becomes empty
-    if (usersInWaitingRoom.length === 0) {
-      clearInterval(countdownInterval);
-      seconds = 30;
-      console.log("Room", waitingRoom, "terminated.");
-    }
   });
+
+  // Start countdown when the first user joins the waiting room
+  if (usersInWaitingRoom.length >= 1 && seconds === 30) {
+    startCountdown();
+    console.log("start counting");
+  }
+
+  // Terminate waiting room if it becomes empty
+  if (usersInWaitingRoom.length === 0) {
+    seconds = 30;
+    clearInterval(countdownInterval);
+    console.log("Room", waitingRoom, "terminated.");
+  }
 
   // Move users to game room when there are four users
   if (usersInWaitingRoom.length === 5) {
