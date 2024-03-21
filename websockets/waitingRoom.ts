@@ -7,7 +7,7 @@ import { startCountdown } from "../libs/countdown";
 // Define constants
 const waitingRoom = "waitingRoom";
 const gameRoom = "gameRoom";
-const seconds = 30;
+let seconds = 30;
 const usersInWaitingRoom: any[] = [];
 const usersInGameRoom: any[] = [];
 let countdownInterval: any;
@@ -21,10 +21,11 @@ export function handleWaitingRoom(socket: any, io: Server) {
   const player = {
     id: socket.id,
   };
+
   usersInWaitingRoom.push(player);
   updateRoom(io, waitingRoom, usersInWaitingRoom);
 
-  // Start countdown if necessary
+  // Start countdown if necessary and end it if timeout
   if (usersInWaitingRoom.length >= 1 && seconds === 30) {
     startCountdown(io, waitingRoom);
     console.log("Start counting");
@@ -41,6 +42,7 @@ export function handleWaitingRoom(socket: any, io: Server) {
     updateRoom(io, waitingRoom, usersInWaitingRoom);
 
     if (usersInWaitingRoom.length === 0) {
+      seconds = 30;
       clearInterval(countdownInterval);
       usersInWaitingRoom.length = 0;
       console.log("Room", waitingRoom, "terminated.");

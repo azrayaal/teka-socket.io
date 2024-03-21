@@ -12,6 +12,7 @@ export function startCountdown(io: Server, waitingRoom: string) {
     if (seconds === -1) {
       clearInterval(countdownInterval);
       console.log("Time Out.");
+      io.to(waitingRoom).emit("timeout", "Time Out");
       // Handle countdown finished event
     }
   }, 1000);

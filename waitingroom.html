@@ -63,6 +63,7 @@
     <p id="game"></p>
     <p id="timeout"></p>
     <h1 id="timer"></h1>
+    <h1 id="timeout"></h1>
 
     <div id="listPlayer"></div>
 
@@ -119,7 +120,10 @@
         console.log(e)
       })
 
-      socket.emit('hello', 'hello from waiting room')
+  socket.on("timeout", (time)=>{
+  document.getElementById('timeout').textContent = time
+  console.log(time);
+  })
 
 
 
