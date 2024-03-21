@@ -98,6 +98,8 @@
         <p id="options"></p>
     </div>
 
+    <div id="totalQuestions"></div>
+
 </body>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -132,6 +134,10 @@
     document.getElementById('timer').innerHTML = countdown
   })
 
+  socket.on('totalQuestions', (e)=>{
+    console.log('total', e);
+    document.getElementById('totalQuestions').innerHTML = e
+  })
 
 
 

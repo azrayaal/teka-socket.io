@@ -79,7 +79,10 @@
       console.log(count);
     })
 
-    socket.on('usersInWaitingRoom', (players)=>{
+    socket.on('hello', (e)=>{
+      console.log(e);
+    })
+    socket.on('usersInRoom', (players)=>{
       console.log(players)
 
       const listPlayers = document.getElementById('listPlayer')
